@@ -1,1 +1,5 @@
-# Projekt
+# Rubics - Timer
+
+## dad
+
+###as
