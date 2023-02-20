@@ -7,7 +7,7 @@ Aplikace slouží k generování "scramblů", ukládání a sledování časů p
 3) Po zapsání solvu do textboxu je možné pokračovat tlačítkem, nebo stisknutím enteru
 4) Možnost odebrání DNF časů vybráním v listboxu a následným stisknutím smazat
 
-##Zlepšení programu
+## Zlepšení programu
 1) přidání několika dalších funkcí (nejlepší average tří, pěti, dvanácti, stopky pomocí podržení mezerníku(nepřesné pro závody))
 2) možnost exportu časů do tabulek excelu
 3) ukládání scramblu k času, kterým byl vyřešen, pro budoucí vracení se
