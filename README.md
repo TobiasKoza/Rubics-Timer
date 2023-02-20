@@ -1,5 +1,9 @@
 # Rubics - Timer
+co to děla
 
-## dad
+## future imrpove
+více funkcí
+rozdělení do class
 
-###as
+
+
