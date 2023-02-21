@@ -11,7 +11,7 @@ from tkinter.constants import LEFT
 from turtle import update, width
 from datetime import datetime, timedelta
 import datetime
-
+import keyboard
 
 #global size_var
 
@@ -311,5 +311,12 @@ instrukce_label.place(x=210, y = 330)
 
 nejlepsi_cas = tk.Label(root,text = "Nejlepsi cas: N/A", font=("Courier", 20))
 nejlepsi_cas.place(x=515, y = 25)
+
+moznosti = ["Zapis", "Stopky"]
+prvni_moznost = tk.StringVar(value="Zapis")
+
+zvol_zapis = tk.OptionMenu(root, prvni_moznost, *moznosti)
+zvol_zapis["width"] = 15
+zvol_zapis.place(x=600, y=390)
 
 root.mainloop()
