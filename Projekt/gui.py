@@ -2,9 +2,7 @@ from contextlib import closing
 import tkinter as tk
 from tkinter import *
 import datetime
-#from function import generate_scramble
-import random
-import zipimport
+from function import generate_scramble
 from function import *
 
 closingIs = True
@@ -193,6 +191,10 @@ def najdi_nejlepsi_cas():
     """
     items = list_casu.get(0, tk.END)
 
+    if not items:
+        nejlepsi_cas.config(text="Nejlepsi cas: N/A")
+        return
+
     seconds_list = []
     for item in items:
         minutes, seconds_and_ms = item.split(":")
@@ -200,9 +202,10 @@ def najdi_nejlepsi_cas():
         total_seconds = int(minutes) * 60 + int(seconds) + int(milliseconds) / 100
         seconds_list.append(total_seconds)
 
-# Find the smallest number in the seconds list and print it
+    # Find the smallest number in the seconds list and print it
     smallest_seconds = min(seconds_list)
     nejlepsi_cas.config(text=f"Nejlepsi cas: {smallest_seconds:.2f}s")
+
 
 def check_entry():
     if vstup.get():

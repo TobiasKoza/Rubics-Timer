@@ -1,6 +1,5 @@
 import random
 from gui import *
-import keyboard
 
 def generate_scramble(size):
     """
