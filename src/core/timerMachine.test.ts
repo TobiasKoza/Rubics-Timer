@@ -24,7 +24,7 @@ describe('časovač bez inspekce', () => {
     s = transition(s, { type: 'tick', t: 300 }, noInsp);
     expect(s.kind).toBe('ready');
     s = transition(s, { type: 'release', t: 1000 }, noInsp);
-    expect(s).toEqual({ kind: 'running', startAt: 1000, penalty: 'OK' });
+    expect(s).toEqual({ kind: 'running', startAt: 1000, penalty: 'OK', splits: [] });
     s = transition(s, { type: 'press', t: 13345 }, noInsp);
     expect(s).toEqual({ kind: 'stopped', timeMs: 12345, penalty: 'OK' });
   });
@@ -48,13 +48,13 @@ describe('časovač bez inspekce', () => {
   });
 
   it('za běhu ignoruje release a tick', () => {
-    const running: TimerState = { kind: 'running', startAt: 0, penalty: 'OK' };
+    const running: TimerState = { kind: 'running', startAt: 0, penalty: 'OK', splits: [] };
     expect(transition(running, { type: 'release', t: 5 }, noInsp)).toBe(running);
     expect(transition(running, { type: 'tick', t: 5 }, noInsp)).toBe(running);
   });
 
   it('cancel zruší běžící solve, ale ne výsledek', () => {
-    expect(transition({ kind: 'running', startAt: 0, penalty: 'OK' }, { type: 'cancel' }, noInsp).kind).toBe('idle');
+    expect(transition({ kind: 'running', startAt: 0, penalty: 'OK', splits: [] }, { type: 'cancel' }, noInsp).kind).toBe('idle');
     const stopped: TimerState = { kind: 'stopped', timeMs: 1, penalty: 'OK' };
     expect(transition(stopped, { type: 'cancel' }, noInsp)).toBe(stopped);
   });
@@ -110,5 +110,27 @@ describe('inspectionPenalty', () => {
     [17_001, 'DNF'],
   ] as const)('%i ms → %s', (ms, p) => {
     expect(inspectionPenalty(ms)).toBe(p);
+  });
+});
+
+describe('multi-phase (splity)', () => {
+  const cfg: TimerConfig = { holdMs: 0, inspection: false, phases: 3 };
+  const start: TimerEvent[] = [
+    { type: 'press', t: 0 },
+    { type: 'release', t: 1000 },
+  ];
+
+  it('každý stisk kromě posledního uloží mezičas', () => {
+    let s = run([...start, { type: 'press', t: 3000 }], cfg);
+    expect(s).toMatchObject({ kind: 'running', splits: [2000] });
+    s = transition(s, { type: 'press', t: 8000 }, cfg);
+    expect(s).toMatchObject({ kind: 'running', splits: [2000, 7000] });
+    s = transition(s, { type: 'press', t: 11_500 }, cfg);
+    expect(s).toEqual({ kind: 'stopped', timeMs: 10_500, penalty: 'OK', splits: [2000, 7000, 10_500] });
+  });
+
+  it('jedna fáze = žádné splity ve výsledku', () => {
+    const s = run([...start, { type: 'press', t: 3000 }], { ...cfg, phases: 1 });
+    expect(s).toEqual({ kind: 'stopped', timeMs: 2000, penalty: 'OK' });
   });
 });

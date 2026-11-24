@@ -32,9 +32,10 @@ export class ScrambleQueue {
     }
   }
 
-  /** Začne na pozadí generovat scramble pro event, pokud už se negeneruje. */
-  prefetch(event: EventId): void {
+  /** Začne na pozadí generovat scramble pro event, pokud už se negeneruje. Vrací slib dokončení. */
+  prefetch(event: EventId): Promise<unknown> {
     if (!this.pending.has(event)) this.pending.set(event, this.start(event));
+    return this.pending.get(event)!.catch(() => undefined);
   }
 
   private start(event: EventId): Promise<string> {

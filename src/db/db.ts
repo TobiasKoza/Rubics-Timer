@@ -9,6 +9,8 @@ export interface Session {
   /** Pořadí v seznamu sessions. */
   order: number;
   createdAt: number;
+  /** Kdy byla session naposledy aktivní (pro přepínání podle eventu). */
+  lastUsedAt?: number;
 }
 
 export interface Solve {
@@ -21,6 +23,8 @@ export interface Solve {
   /** Unix timestamp (ms) dokončení solvu. */
   date: number;
   comment?: string;
+  /** Multi-phase: kumulativní konce fází v ms (poslední = timeMs). */
+  splits?: number[];
 }
 
 export type NewSolve = Omit<Solve, 'id'>;

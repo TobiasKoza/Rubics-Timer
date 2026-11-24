@@ -62,3 +62,24 @@ export function nextScramble(): Promise<void> {
 export function prevScramble(): void {
   scrambleStore.set((s) => (s.index > 0 ? { ...s, index: s.index - 1 } : s));
 }
+
+/**
+ * Zahřátí scramblerů po startu: v době nečinnosti postupně předgeneruje scrambly
+ * pro dané eventy (cubing.js si přitom načte vyhledávací tabulky), takže první
+ * 4x4/5x5 scramble je pak k dispozici okamžitě.
+ */
+export function warmUpScramblers(events: EventId[]): void {
+  const idle: (cb: () => void) => void =
+    typeof requestIdleCallback === 'function' ? (cb) => requestIdleCallback(cb, { timeout: 3000 }) : (cb) => setTimeout(cb, 300);
+  const queueOrder = [...new Set(events)];
+  const step = () => {
+    const event = queueOrder.shift();
+    if (event) void queue.prefetch(event).then(() => idle(step));
+  };
+  idle(step);
+}
+
+/** Je k dispozici scramble, se kterým jde začít solve? */
+export function hasScramble(s: ScrambleState = scrambleStore.get()): boolean {
+  return !s.loading && !s.error && s.history[s.index] !== undefined;
+}

@@ -21,6 +21,8 @@ export type TimerPhase = 'idle' | 'inspecting' | 'running';
 export interface SolveResult {
   timeMs: number;
   penalty: Penalty;
+  /** Kumulativní konce fází u multi-phase (poslední = timeMs). */
+  splits?: number[];
 }
 
 interface Options {
@@ -28,6 +30,8 @@ interface Options {
   showRunningTime: boolean;
   /** false = časovač neposlouchá vstup (ruční zadávání, otevřený dialog). */
   enabled: boolean;
+  /** false = nový solve nejde začít (např. scramble se ještě generuje). */
+  canStart: boolean;
 }
 
 const ACTIVE: ReadonlySet<TimerState['kind']> = new Set(['holding', 'ready', 'inspecting', 'running']);
@@ -38,12 +42,13 @@ export class TimerController {
 
   private state: TimerState = initialTimerState;
   private config: TimerConfig = { holdMs: 300, inspection: false };
-  private options: Options = { alertMode: 'voice', showRunningTime: true, enabled: true };
+  private options: Options = { alertMode: 'voice', showRunningTime: true, enabled: true, canStart: true };
   private display: HTMLElement | null = null;
   private raf = 0;
   private idleText = formatTime(0);
   private lastText = '';
   private lastVisual = '';
+  private lastPhase = '';
   private alerted8 = false;
   private alerted12 = false;
   private pointerDown = false;
@@ -80,7 +85,7 @@ export class TimerController {
     }
     if (next.kind === 'stopped') {
       this.idleText = formatSolve(next.timeMs, next.penalty);
-      this.onSolve?.({ timeMs: next.timeMs, penalty: next.penalty });
+      this.onSolve?.({ timeMs: next.timeMs, penalty: next.penalty, splits: next.splits });
     }
     this.phase.set(phaseOf(next));
     this.render(performance.now());
@@ -90,7 +95,7 @@ export class TimerController {
   /** Připojí displej a dotykovou plochu, vrátí funkci pro odpojení. */
   attach(display: HTMLElement, touchArea: HTMLElement): () => void {
     this.display = display;
-    this.lastText = this.lastVisual = '';
+    this.lastText = this.lastVisual = this.lastPhase = '';
     this.render(performance.now());
 
     const onKeyDown = (e: KeyboardEvent) => this.handleKeyDown(e);
@@ -142,7 +147,7 @@ export class TimerController {
     if (e.code !== 'Space' || isEditable(e.target) || e.ctrlKey || e.altKey || e.metaKey) return;
     e.preventDefault();
     e.stopImmediatePropagation();
-    if (e.repeat) return;
+    if (e.repeat || !this.mayPress()) return;
     blurButtons();
     unlockAudio();
     this.dispatch({ type: 'press', t: eventTime(e) });
@@ -157,6 +162,7 @@ export class TimerController {
   private handlePointerDownArea(e: PointerEvent): void {
     if (!this.options.enabled || !e.isPrimary || e.button !== 0 || this.state.kind === 'running') return;
     e.preventDefault();
+    if (!this.mayPress()) return;
     unlockAudio();
     this.pointerDown = true;
     this.dispatch({ type: 'press', t: eventTime(e) });
@@ -178,6 +184,12 @@ export class TimerController {
       return;
     }
     this.dispatch({ type: 'release', t: eventTime(e) });
+  }
+
+  /** Z klidového stavu jde začít jen se scramblem; rozběhnutou inspekci nebrzdíme. */
+  private mayPress(): boolean {
+    const idle = this.state.kind === 'idle' || this.state.kind === 'stopped';
+    return !idle || this.options.canStart;
   }
 
   /** Okno ztratilo fokus během držení – keyup nepřijde, tak držení zrušíme. */
@@ -221,6 +233,7 @@ export class TimerController {
     const s = this.state;
     let text: string;
     let visual: string;
+    let phase = '';
     switch (s.kind) {
       case 'idle':
       case 'stopped':
@@ -243,6 +256,7 @@ export class TimerController {
       case 'running':
         text = this.options.showRunningTime ? formatTime(now - s.startAt) : '…';
         visual = 'running';
+        if ((this.config.phases ?? 1) > 1) phase = `${s.splits.length + 1}/${this.config.phases}`;
         break;
     }
     // do DOM sahat jen při změně – žádné zbytečné layouty
@@ -253,6 +267,11 @@ export class TimerController {
     if (visual !== this.lastVisual) {
       el.dataset.state = visual;
       this.lastVisual = visual;
+    }
+    if (phase !== this.lastPhase) {
+      if (phase) el.dataset.phase = phase;
+      else delete el.dataset.phase;
+      this.lastPhase = phase;
     }
   }
 }

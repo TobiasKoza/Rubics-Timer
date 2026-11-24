@@ -14,6 +14,8 @@ export interface TimerConfig {
   holdMs: number;
   /** WCA inspekce 15 s. */
   inspection: boolean;
+  /** Počet fází (multi-phase / split timing). 1 = běžný solve. */
+  phases?: number;
 }
 
 export const INSPECTION_MS = 15_000;
@@ -25,8 +27,8 @@ export type TimerState =
   | { kind: 'inspecting'; inspStart: number }
   | { kind: 'holding'; pressAt: number; inspStart: number | null }
   | { kind: 'ready'; inspStart: number | null }
-  | { kind: 'running'; startAt: number; penalty: Penalty }
-  | { kind: 'stopped'; timeMs: number; penalty: Penalty };
+  | { kind: 'running'; startAt: number; penalty: Penalty; splits: number[] }
+  | { kind: 'stopped'; timeMs: number; penalty: Penalty; splits?: number[] };
 
 export type TimerEvent =
   | { type: 'press'; t: number }
@@ -76,13 +78,20 @@ export function transition(state: TimerState, event: TimerEvent, config: TimerCo
     case 'ready':
       if (event.type === 'release') {
         const penalty = state.inspStart !== null ? inspectionPenalty(event.t - state.inspStart) : 'OK';
-        return { kind: 'running', startAt: event.t, penalty };
+        return { kind: 'running', startAt: event.t, penalty, splits: [] };
       }
       return state;
 
     case 'running':
       if (event.type === 'press') {
-        return { kind: 'stopped', timeMs: Math.max(0, Math.round(event.t - state.startAt)), penalty: state.penalty };
+        const elapsed = Math.max(0, Math.round(event.t - state.startAt));
+        const phases = Math.max(1, config.phases ?? 1);
+        const splits = [...state.splits, elapsed];
+        // multi-phase: každý stisk kromě posledního jen uloží mezičas
+        if (splits.length < phases) return { ...state, splits };
+        return phases > 1
+          ? { kind: 'stopped', timeMs: elapsed, penalty: state.penalty, splits }
+          : { kind: 'stopped', timeMs: elapsed, penalty: state.penalty };
       }
       return state;
   }
