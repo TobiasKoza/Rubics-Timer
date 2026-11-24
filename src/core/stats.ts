@@ -112,6 +112,8 @@ export interface AverageStat extends AverageDef {
 
 export interface StatsSummary {
   count: number;
+  /** Poslední (efektivní) čas, DNF = Infinity. */
+  last: number | null;
   dnfCount: number;
   best: number | null;
   bestIndex: number | null;
@@ -202,6 +204,7 @@ export class StatsTracker {
     const mean = valid > 0 ? this.finiteSum / valid : null;
     this.summary = {
       count: times.length,
+      last: time,
       dnfCount: prev.dnfCount + (isDnf ? 1 : 0),
       best,
       bestIndex,
@@ -257,6 +260,7 @@ export function computeSummary(times: readonly number[]): StatsSummary {
 
   return {
     count: times.length,
+    last: times.at(-1) ?? null,
     dnfCount,
     best,
     bestIndex,

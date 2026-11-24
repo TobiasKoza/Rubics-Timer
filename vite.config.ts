@@ -18,6 +18,7 @@ export default defineConfig({
     },
   },
   worker: { format: 'es' },
-  optimizeDeps: { exclude: ['cubing'] },
+  // uplot se načítá líně – bez include by ho dev server objevil pozdě a přenačetl stránku
+  optimizeDeps: { exclude: ['cubing'], include: ['uplot'] },
   test: { include: ['src/**/*.test.ts'], environment: 'node' },
 });

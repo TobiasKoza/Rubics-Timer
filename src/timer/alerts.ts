@@ -44,3 +44,23 @@ export function inspectionAlert(second: 8 | 12, mode: InspectionAlert): void {
   if (mode === 'beep') beep(second === 8 ? 1 : 2);
   else if (mode === 'voice') speak(second === 8 ? t.voice.eight : t.voice.twelve);
 }
+
+/** Krátká stoupající melodie pro nové PB. */
+export function pbChime(): void {
+  unlockAudio();
+  if (!audio) return;
+  const now = audio.currentTime;
+  [660, 880, 1320].forEach((freq, i) => {
+    const osc = audio!.createOscillator();
+    const gain = audio!.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    const start = now + i * 0.09;
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(0.18, start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
+    osc.connect(gain).connect(audio!.destination);
+    osc.start(start);
+    osc.stop(start + 0.24);
+  });
+}
